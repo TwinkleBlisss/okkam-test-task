@@ -1,28 +1,22 @@
-"""Тесты эндпоинтов через TestClient (БД и реальный пул не нужны)."""
-
-from collections.abc import Iterator
+"""Тесты эндпоинтов через TestClient (реальная БД и пул не нужны)."""
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import api as api_module
-from app.db import get_db_connection
+from app import db as db_module
 from app.main import app
 
 client = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
-def _connection_override():
-    """Подменяем зависимость соединения: тесты не трогают реальный пул/БД."""
-
-    def _fake_connection() -> Iterator[object]:
-        yield object()
-
-    app.dependency_overrides[get_db_connection] = _fake_connection
+def _clean_audience_cache():
+    """Каждый тест работает с пустым кэшем аудиторий (lru_cache)."""
+    db_module.cached_audience_sums.cache_clear()
     yield
-    app.dependency_overrides.pop(get_db_connection, None)
+    db_module.cached_audience_sums.cache_clear()
 
 
 def test_invalid_audience_rejected() -> None:
@@ -51,14 +45,14 @@ def test_valid_audience_returns_percent(monkeypatch) -> None:
     assert resp.json() == {'percent': 0.4395}
 
 
-def test_database_unavailable_returns_503() -> None:
-    def _broken_connection() -> Iterator[None]:
-        raise SQLAlchemyError('no database')
-        yield
+def test_database_unavailable_returns_500(monkeypatch) -> None:
+    class _BrokenEngine:
+        def connect(self) -> None:
+            raise SQLAlchemyError('no database')
 
-    app.dependency_overrides[get_db_connection] = _broken_connection
+    monkeypatch.setattr(db_module, 'engine', _BrokenEngine())
     resp = client.get(
         '/getPercent', params={'audience1': 'age = 1', 'audience2': 'age = 1'}
     )
-    assert resp.status_code == 503
-    assert resp.json() == {'detail': 'database unavailable'}
+    assert resp.status_code == 500
+    assert resp.json() == {'message': 'An unexpected error has occurred.'}
