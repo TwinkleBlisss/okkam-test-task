@@ -41,7 +41,7 @@ app/
   api.py      хендлеры /getPercent, /health (APIRouter)
   service.py  бизнес-логика: запрос в БД -> процент
   schemas.py  pydantic-модель запроса: валидация аудиторий (sqlglot + whitelist)
-  db.py       SQLAlchemy Core: пул, соединение на запрос (Depends), агрегирующий запрос
+  db.py       SQLAlchemy Core: пул, соединение (Depends), агрегирующий запрос, кэш-обёртка (lru_cache)
   exceptions.py кастомные исключения и их HTTP-обработчики (некорректный ответ БД -> 500)
   logger.py   логирование: общий логгер приложения (формат, уровень)
   config.py   настройки (pydantic-settings, POSTGRES_*)
@@ -55,9 +55,9 @@ tests/
 ```
 
 Один запрос: pydantic-модель валидирует обе аудитории как query-параметры
-(422 при ошибке) → соединение из пула через `Depends(get_db_connection)` →
-один SQL-запрос по `respondent_agg` — `SUM(avg_weight) FILTER (WHERE …)`
-по сумме первой аудитории и по пересечению (`filter1 AND filter2`) →
+(422 при ошибке) → SQL-запрос по `respondent_agg` — `SUM(avg_weight)
+FILTER (WHERE …)` по сумме первой аудитории и по пересечению
+(`filter1 AND filter2`; результат кэшируется парой аудиторий) →
 `percent = sum_intersection / sum_audience1` (0.0 при сумме 0).
 
 Ключевые моменты:
@@ -70,6 +70,10 @@ tests/
   запрос идёт по 17k строк, а не по 500k.
 - **Фильтры валидируются sqlglot** (postgres-диалект): разбор в AST,
   запрет подзапросов и функций, белый список колонок `age`/`sex`.
+- **Кэш агрегатов** — отдельная обёртка `db.cached_audience_sums`
+  (`lru_cache`) поверх обычного запроса: ключ — пара аудиторий, данные
+  статичные, поэтому повторные условия не бьют по БД. Очистка:
+  `cached_audience_sums.cache_clear()`.
 
 ## Тесты
 

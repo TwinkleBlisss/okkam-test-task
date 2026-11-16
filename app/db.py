@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 from decimal import Decimal
+from functools import lru_cache
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Connection, Engine
@@ -36,3 +37,13 @@ def get_audience_sums(
         sum_intersection,
     )
     return sum_audience1, sum_intersection
+
+
+@lru_cache(maxsize=128)
+def cached_audience_sums(
+    audience1: str,
+    audience2: str,
+) -> tuple[Decimal, Decimal]:
+    """Кешируемый запрос к БД"""
+    with engine.connect() as conn:
+        return get_audience_sums(conn, audience1, audience2)

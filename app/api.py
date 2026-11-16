@@ -14,14 +14,9 @@ ConnectionDep = Annotated[Connection, Depends(get_db_connection)]
 
 
 @router.get('/getPercent')
-def get_percent(
-    params: Annotated[GetPercentRequest, Depends()],
-    conn: ConnectionDep,
-):
+def get_percent(params: Annotated[GetPercentRequest, Depends()]):
     """Процент вхождения второй аудитории в первую"""
-    return {
-        'percent': get_audience_percent(conn, params.audience1, params.audience2)
-    }
+    return {'percent': get_audience_percent(params.audience1, params.audience2)}
 
 
 @router.get('/health')
