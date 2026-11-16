@@ -1,5 +1,7 @@
 *venv
 __pycache__
+docker-compose.override.yml
+loadtest/report*
 
 # Убрал, чтобы не нужно было копировать вручную
 # *env
