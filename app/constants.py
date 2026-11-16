@@ -8,15 +8,8 @@ PERCENT_PLACES = 4
 
 # Запрос на суммы avg_weight по обеим аудиториям
 PERCENT_QUERY = """
-    WITH audience1 AS (
-        SELECT respondent, avg_weight FROM respondent_agg WHERE {filter1}
-    ),
-    audience2 AS (
-        SELECT respondent, avg_weight FROM respondent_agg WHERE {filter2}
-    )
     SELECT
-        COALESCE(SUM(audience1.avg_weight), 0),
-        COALESCE(SUM(audience1.avg_weight) FILTER (WHERE audience2.respondent IS NOT NULL), 0)
-    FROM audience1
-    LEFT JOIN audience2 USING (respondent)
+        COALESCE(SUM(avg_weight) FILTER (WHERE ({filter1})), 0),
+        COALESCE(SUM(avg_weight) FILTER (WHERE ({filter1}) AND ({filter2})), 0)
+    FROM respondent_agg
 """
