@@ -1,3 +1,4 @@
+from functools import lru_cache
 from typing import Annotated
 
 import sqlglot
@@ -51,7 +52,9 @@ def _validate_where(v: str) -> None:
             raise ValueError(f'Недопустимое поле для фильтрации: {col.name}')
 
 
+@lru_cache(maxsize=256)
 def check_where_clause(audience: str) -> str:
+    """Кешируемая валидация WHERE-фильтра аудитории."""
     try:
         _validate_where(audience)
     except ValueError as e:
