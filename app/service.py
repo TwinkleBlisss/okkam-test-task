@@ -22,5 +22,5 @@ def get_audience_percent(
     """Расчёт процента вхождения audience2 в audience1"""
     sum1, sum_intersection = get_audience_sums(conn, audience1, audience2)
     percent = compute_percent(sum1, sum_intersection)
-    logger.info(f'percent({audience1}, {audience2}) = {percent}')
+    logger.info('percent(%s, %s) = %s', audience1, audience2, percent)
     return percent

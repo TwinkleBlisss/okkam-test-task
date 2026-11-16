@@ -20,7 +20,7 @@ def _validate_where(v: str) -> None:
             read='postgres',
         )
     except sqlglot.errors.ParseError as e:
-        raise ValueError(f'Ошибка синтаксиса в WHERE: {e}') from e
+        raise ValueError('Ошибка синтаксиса в WHERE') from e
 
     if not isinstance(parsed, exp.Select):
         raise ValueError(  # noqa: TRY004
@@ -55,7 +55,7 @@ def check_where_clause(audience: str) -> str:
     try:
         _validate_where(audience)
     except ValueError as e:
-        logger.warning(f'rejected audience filter {audience[:100]}: {e}')
+        logger.warning('rejected audience filter %s: %s', audience[:100], e)
         raise
     return audience
 

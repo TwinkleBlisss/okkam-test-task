@@ -31,6 +31,8 @@ def get_audience_sums(
 
     sum_audience1, sum_intersection = row
     logger.info(
-        f'sum_audience1={sum_audience1}, sum_intersection={sum_intersection}'
+        'sum_audience1=%s, sum_intersection=%s',
+        sum_audience1,
+        sum_intersection,
     )
     return sum_audience1, sum_intersection

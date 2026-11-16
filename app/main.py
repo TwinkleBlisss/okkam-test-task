@@ -14,7 +14,10 @@ from .logger import logger
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     logger.info(
-        f'API started, database: {settings.host}:{settings.port}/{settings.db}'
+        'API started, database: %s:%s/%s',
+        settings.host,
+        settings.port,
+        settings.db,
     )
     yield
 
@@ -35,8 +38,13 @@ async def log_request(
     start = time.perf_counter()
     response = await call_next(request)
     query = f'?{request.url.query}' if request.url.query else ''
+    elapsed_ms = (time.perf_counter() - start) * 1000
     logger.info(
-        f'{request.method} {request.url.path}{query} -> '
-        f'{response.status_code} ({(time.perf_counter() - start) * 1000:.1f} ms)'
+        '%s %s%s -> %s (%.1f ms)',
+        request.method,
+        request.url.path,
+        query,
+        response.status_code,
+        elapsed_ms,
     )
     return response
