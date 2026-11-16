@@ -1,9 +1,30 @@
 [project]
 name = "okkam-test-task"
 version = "0.1.0"
-description = "Add your description here"
+description = "Okkam test task: audience percent API"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi[standard]>=0.163.1",
+    "sqlglot>=30",
+    "sqlalchemy>=2",
+    "psycopg[binary]>=3.1",
+    "pydantic-settings>=2",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+
+# Ruff
+[tool.ruff]
+line-length = 85
+
+[tool.ruff.format]
+quote-style = "single"
+
+# Pytest
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

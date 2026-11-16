@@ -1,5 +1,6 @@
 *venv
 __pycache__
+docker-compose.override.yml
 
 # Убрал, чтобы не нужно было копировать вручную
 # *env
