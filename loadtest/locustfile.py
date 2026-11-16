@@ -67,7 +67,7 @@ def build_scenarios(seed: int = SEED) -> list[Scenario]:
     rng = random.Random(seed)
     scenarios: list[Scenario] = []
 
-    sex = lambda: f'Sex = {rng.choice((1, 2))}'  # noqa: E731
+    sex = lambda: f'Sex = {rng.choice((1, 2))}'
 
     # Простые фильтры по возрасту
     for _ in range(10):
