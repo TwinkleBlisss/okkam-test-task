@@ -37,10 +37,13 @@ SQL-синтаксиса по колонкам `age`/`sex` (без подзап�
 
 ```
 app/
-  main.py     FastAPI: хендлеры /getPercent, /health; 503 при ошибках БД
-  percent.py  бизнес-логика: запрос в БД -> процент
+  main.py     FastAPI: сборка app, роутер из api.py; 503 при ошибках БД; логирование запросов
+  api.py      хендлеры /getPercent, /health (APIRouter)
+  service.py  бизнес-логика: запрос в БД -> процент
   schemas.py  pydantic-модель запроса: валидация аудиторий (sqlglot + whitelist)
-  db.py       SQLAlchemy Core: пул, соединение на запрос (Depends), CTE-запрос
+  db.py       SQLAlchemy Core: пул, соединение на запрос (Depends), агрегирующий запрос
+  exceptions.py кастомные исключения и их HTTP-обработчики (некорректный ответ БД -> 500)
+  logger.py   логирование: общий логгер приложения (формат, уровень)
   config.py   настройки (pydantic-settings, POSTGRES_*)
 init-data/
   01-schema.sql          таблица statistics
@@ -53,13 +56,15 @@ tests/
 
 Один запрос: pydantic-модель валидирует обе аудитории как query-параметры
 (422 при ошибке) → соединение из пула через `Depends(get_db_connection)` →
-один SQL-запрос (CTE + LEFT JOIN) по `respondent_agg` →
+один SQL-запрос по `respondent_agg` — `SUM(avg_weight) FILTER (WHERE …)`
+по сумме первой аудитории и по пересечению (`filter1 AND filter2`) →
 `percent = sum_intersection / sum_audience1` (0.0 при сумме 0).
 
 Ключевые моменты:
 
 - **Расчёт выполняет БД** — валидированные фильтры подставляются в
-  CTE-запрос; данные в Python не переносятся.
+  единый запрос с условной агрегацией (`SUM … FILTER`); данные в
+  Python не переносятся.
 - **`respondent_agg`** — avg(weight) по каждому респонденту,
   предвычислена на инициализации (age/sex константны на респондента),
   запрос идёт по 17k строк, а не по 500k.
@@ -71,4 +76,24 @@ tests/
 ```bash
 uv sync
 uv run pytest
+```
+
+## Линт и проверка типов
+
+```bash
+uv run ruff check --fix .
+uv run ruff format .
+uv run mypy .
+```
+
+## Нагрузочное тестирование
+
+Нагрузочный тест на [Locust](loadtest/README.md): пул ~70 разнообразных
+условий (возраст/пол, AND/OR, длинные фильтры, граничные случаи),
+статистика по каждому типу запроса (RPS, p50/p95/p99, ошибки).
+
+```bash
+uv run locust -f loadtest/locustfile.py --headless \
+    -u 50 -r 10 --run-time 60s --host http://localhost:80 \
+    --csv loadtest/report --html loadtest/report.html
 ```

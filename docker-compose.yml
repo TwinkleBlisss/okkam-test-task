@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:18
-    container_name: postgres_18_db
+    container_name: okkam_db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}

@@ -1,5 +1,3 @@
-"""Настройки приложения из переменных окружения (POSTGRES_*)."""
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 

@@ -16,6 +16,8 @@ dependencies = [
 dev = [
     "locust>=2.47.0",
     "pytest>=8",
+    "ruff>=0.12",
+    "mypy>=1.15",
 ]
 
 # Ruff

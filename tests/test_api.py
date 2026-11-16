@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import SQLAlchemyError
 
-from app import main as main_module
+from app import api as api_module
 from app.db import get_db_connection
 from app.main import app
 
@@ -39,7 +39,7 @@ def test_missing_audience_rejected() -> None:
 
 
 def test_valid_audience_returns_percent(monkeypatch) -> None:
-    monkeypatch.setattr(main_module, 'get_audience_percent', lambda *args: 0.4395)
+    monkeypatch.setattr(api_module, 'get_audience_percent', lambda *args: 0.4395)
     resp = client.get(
         '/getPercent',
         params={

@@ -1,49 +1,42 @@
-import logging
-from typing import Annotated
+import time
+from collections.abc import Awaitable, Callable
+from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, Request
-from fastapi.responses import JSONResponse
-from sqlalchemy import text
-from sqlalchemy.engine import Connection
-from sqlalchemy.exc import SQLAlchemyError
+from fastapi import FastAPI, Request
+from starlette.responses import Response
 
-from .db import get_db_connection
-from .percent import get_audience_percent
-from .schemas import GetPercentRequest
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-)
-logger = logging.getLogger('app')
-
-app = FastAPI(title='Okkam test task API')
-
-ConnectionDep = Annotated[Connection, Depends(get_db_connection)]
+from .api import router
+from .config import settings
+from .exceptions import register_exception_handlers
+from .logger import logger
 
 
-@app.exception_handler(SQLAlchemyError)
-def database_unavailable(request: Request, exc: SQLAlchemyError):
-    """Ошибка БД (соединение или запрос) -> 503 вместо 500."""
-    logger.exception('database error')
-    return JSONResponse(
-        status_code=503,
-        content={'detail': 'database unavailable'},
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    logger.info(
+        f'API started, database: {settings.host}:{settings.port}/{settings.db}'
     )
+    yield
 
 
-@app.get('/getPercent')
-def get_percent(
-    params: Annotated[GetPercentRequest, Depends()],
-    conn: ConnectionDep,
-):
-    """Процент вхождения второй аудитории в первую"""
-    return {
-        'percent': get_audience_percent(conn, params.audience1, params.audience2)
-    }
+app = FastAPI(title='Okkam test task API', lifespan=lifespan)
+
+app.include_router(router)
+
+register_exception_handlers(app)
 
 
-@app.get('/health')
-def health(conn: ConnectionDep):
-    conn.execute(text('SELECT 1'))
-    return {'app': True, 'database': True}
+@app.middleware('http')
+async def log_request(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
+    """Логируем каждый запрос: метод, путь, статус и длительность."""
+    start = time.perf_counter()
+    response = await call_next(request)
+    query = f'?{request.url.query}' if request.url.query else ''
+    logger.info(
+        f'{request.method} {request.url.path}{query} -> '
+        f'{response.status_code} ({(time.perf_counter() - start) * 1000:.1f} ms)'
+    )
+    return response
